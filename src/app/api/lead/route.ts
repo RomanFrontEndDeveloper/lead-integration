@@ -2,81 +2,87 @@ import { sendTelegramAlert } from '@/lib/telegram';
 import { validateForm } from '@/lib/validators';
 
 export async function POST(req: Request) {
+	console.log('LEAD API CALLED');
+
 	try {
-		const body = await req.json();
-		const { name, phone, website, timestamp } = body;
+		const { name, phone, website, timestamp } = await req.json();
+
+		console.log('DATA:', { name, phone });
 
 		// 🛡️ Honeypot
 		if (website) {
-			return new Response(JSON.stringify({ error: 'Spam detected' }), {
-				status: 400,
-			});
+			return Response.json(
+				{ success: false, error: 'Spam detected' },
+				{ status: 400 },
+			);
 		}
 
 		// 🛡️ Timing
-		if (Date.now() - timestamp < 3000) {
-			return new Response(JSON.stringify({ error: 'Too fast' }), {
-				status: 400,
-			});
+		if (!timestamp || Date.now() - timestamp < 3000) {
+			return Response.json(
+				{ success: false, error: 'Too fast' },
+				{ status: 400 },
+			);
 		}
 
 		// ✅ Валідація
 		const errors = validateForm(name, phone);
 		if (Object.keys(errors).length > 0) {
-			return new Response(JSON.stringify({ errors }), { status: 400 });
+			return Response.json({ success: false, errors }, { status: 400 });
 		}
 
 		// =========================
-		// 1. SalesDrive
+		// SalesDrive (ПРАВИЛЬНО)
 		// =========================
-		let salesResult = null;
+		let salesResult: any = null;
 
 		try {
-			const res = await fetch('https://salesdrive.ua/api/order/add/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ form: { name, phone } }),
-			});
+			const res = await fetch(
+				'https://roman-trend.salesdrive.me/handler/',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Api-Key': process.env.SALESDRIVE_API_KEY!,
+					},
+					body: JSON.stringify({
+						fName: name, // ⚠️ не name!
+						phone: phone,
+					}),
+				},
+			);
 
-			if (!res.ok) throw new Error('SalesDrive failed');
+			const text = await res.text();
+			console.log('SalesDrive raw response:', text);
 
-			salesResult = await res.json();
-		} catch (e) {
-			await sendTelegramAlert('❌ SalesDrive API error');
-		}
+			let data: any = {};
+			try {
+				data = JSON.parse(text);
+			} catch {}
 
-		// =========================
-		// 2. Діловод
-		// =========================
-		let dilovodResult = null;
+			if (!res.ok || data?.status === 'error') {
+				throw new Error(data?.message || 'SalesDrive error');
+			}
 
-		try {
-			const res = await fetch('https://dilovod.ua/api/...', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					category: 'Клієнт',
-					name,
-					phone,
-				}),
-			});
+			salesResult = data;
+		} catch (error) {
+			console.error('SalesDrive error:', error);
 
-			if (!res.ok) throw new Error('Dilovod failed');
-
-			dilovodResult = await res.json();
-		} catch (e) {
-			await sendTelegramAlert('❌ Dilovod API error');
+			await sendTelegramAlert(
+				`❌ SalesDrive error\nName: ${name}\nPhone: ${phone}`,
+			);
 		}
 
 		return Response.json({
-			success: true,
-			salesResult,
-			dilovodResult,
+			success: Boolean(salesResult),
+			data: { salesResult },
 		});
 	} catch (error) {
-		await sendTelegramAlert('🔥 SERVER CRASH');
-		return new Response(JSON.stringify({ error: 'Server error' }), {
-			status: 500,
-		});
+		console.error('Server error:', error);
+
+		return Response.json(
+			{ success: false, error: 'Server error' },
+			{ status: 500 },
+		);
 	}
 }
