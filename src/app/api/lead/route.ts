@@ -9,32 +9,51 @@ export async function POST(req: Request) {
 
 		console.log('DATA:', { name, phone });
 
-		// 🛡️ Honeypot
+		// =========================
+		// 🛡️ Honeypot anti-spam
+		// =========================
 		if (website) {
 			return Response.json(
-				{ success: false, error: 'Spam detected' },
+				{
+					success: false,
+					error: 'Spam detected',
+				},
 				{ status: 400 },
 			);
 		}
 
-		// 🛡️ Timing
+		// =========================
+		// 🛡️ Timing anti-spam
+		// =========================
 		if (!timestamp || Date.now() - timestamp < 3000) {
 			return Response.json(
-				{ success: false, error: 'Too fast' },
+				{
+					success: false,
+					error: 'Too fast',
+				},
 				{ status: 400 },
 			);
 		}
 
-		// ✅ Валідація
+		// =========================
+		// ✅ Validation
+		// =========================
 		const errors = validateForm(name, phone);
+
 		if (Object.keys(errors).length > 0) {
-			return Response.json({ success: false, errors }, { status: 400 });
+			return Response.json(
+				{
+					success: false,
+					errors,
+				},
+				{ status: 400 },
+			);
 		}
 
 		// =========================
-		// SalesDrive (ПРАВИЛЬНО)
+		// ✅ SalesDrive API
 		// =========================
-		let salesResult: any = null;
+		let salesSuccess = false;
 
 		try {
 			const res = await fetch(
@@ -46,42 +65,49 @@ export async function POST(req: Request) {
 						'X-Api-Key': process.env.SALESDRIVE_API_KEY!,
 					},
 					body: JSON.stringify({
-						fName: name, // ⚠️ не name!
+						form: '1',
+						fName: name,
 						phone: phone,
+						comment: 'Lead from website',
 					}),
 				},
 			);
 
-			const text = await res.text();
-			console.log('SalesDrive raw response:', text);
+			console.log('SalesDrive status:', res.status);
 
-			let data: any = {};
-			try {
-				data = JSON.parse(text);
-			} catch {}
-
-			if (!res.ok || data?.status === 'error') {
-				throw new Error(data?.message || 'SalesDrive error');
+			if (!res.ok) {
+				throw new Error('SalesDrive request failed');
 			}
 
-			salesResult = data;
+			salesSuccess = true;
 		} catch (error) {
 			console.error('SalesDrive error:', error);
 
+			// =========================
+			// 📢 Telegram alert
+			// =========================
 			await sendTelegramAlert(
-				`❌ SalesDrive error\nName: ${name}\nPhone: ${phone}`,
+				`❌ SalesDrive API error
+		
+        Name: ${name}
+        Phone: ${phone}`,
 			);
 		}
 
+		// =========================
+		// ✅ Response
+		// =========================
 		return Response.json({
-			success: Boolean(salesResult),
-			data: { salesResult },
+			success: salesSuccess,
 		});
 	} catch (error) {
 		console.error('Server error:', error);
 
 		return Response.json(
-			{ success: false, error: 'Server error' },
+			{
+				success: false,
+				error: 'Server error',
+			},
 			{ status: 500 },
 		);
 	}
