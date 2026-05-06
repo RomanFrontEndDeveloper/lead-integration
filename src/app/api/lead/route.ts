@@ -1,5 +1,6 @@
 import { sendTelegramAlert } from '@/lib/telegram';
 import { validateForm } from '@/lib/validators';
+import { createDilovodClient } from '@/lib/dilovod';
 
 export async function POST(req: Request) {
 	console.log('LEAD API CALLED');
@@ -88,9 +89,30 @@ export async function POST(req: Request) {
 			// =========================
 			await sendTelegramAlert(
 				`❌ SalesDrive API error
-		
-        Name: ${name}
-        Phone: ${phone}`,
+
+Name: ${name}
+Phone: ${phone}`,
+			);
+		}
+
+		// =========================
+		// ✅ Dilovod API
+		// =========================
+		try {
+			await createDilovodClient(name, phone);
+
+			console.log('Dilovod client created');
+		} catch (error) {
+			console.error('Dilovod error:', error);
+
+			// =========================
+			// 📢 Telegram alert
+			// =========================
+			await sendTelegramAlert(
+				`❌ Dilovod API error
+
+Name: ${name}
+Phone: ${phone}`,
 			);
 		}
 
