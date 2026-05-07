@@ -41,7 +41,10 @@ export async function POST(req: Request) {
 		// =========================
 		// ✅ SalesDrive API
 		// =========================
-		let salesResult: any = null;
+		let salesResult: {
+			status: number;
+			response: string;
+		} | null = null;
 
 		try {
 			const res = await fetch(

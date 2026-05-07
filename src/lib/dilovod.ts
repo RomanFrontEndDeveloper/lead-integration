@@ -1,27 +1,55 @@
 export async function createDilovodClient(name: string, phone: string) {
 	try {
-		const res = await fetch('https://api.dilovod.ua/v1/objects', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-Api-Key': process.env.DILOVOD_API_KEY!,
+		const packet = {
+			version: '0.25',
+
+			key: process.env.DILOVOD_API_KEY,
+
+			action: 'saveObject',
+
+			params: {
+				header: {
+					id: 'catalogs.persons',
+
+					name: {
+						uk: name,
+					},
+
+					personType: 1004000000000035,
+
+					details: JSON.stringify({
+						phones: [
+							{
+								type: 'main',
+								value: phone,
+							},
+						],
+					}),
+				},
 			},
-			body: JSON.stringify({
-				category: 'Клієнт',
-				name,
-				phone,
+		};
+
+		const res = await fetch('https://api.dilovod.ua', {
+			method: 'POST',
+
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+
+			body: new URLSearchParams({
+				packet: JSON.stringify(packet),
 			}),
 		});
 
-		const text = await res.text();
+		const data = await res.json();
 
-		console.log('Dilovod raw:', text);
+		console.log('Dilovod raw:', data);
 
-		if (!res.ok) {
-			throw new Error('Dilovod API error');
+		if (data.error) {
+			throw new Error(data.error);
 		}
 
-		return text;
+		return data;
 	} catch (error) {
 		console.error('Dilovod error:', error);
 

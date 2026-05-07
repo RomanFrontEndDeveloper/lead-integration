@@ -8,6 +8,9 @@ export default function Home() {
 		phone: '',
 	});
 
+	// honeypot state
+	const [website, setWebsite] = useState('');
+
 	const [loading, setLoading] = useState(false);
 
 	// час відкриття сторінки (антиспам)
@@ -27,13 +30,18 @@ export default function Home() {
 		try {
 			const res = await fetch('/api/lead', {
 				method: 'POST',
+
 				headers: {
 					'Content-Type': 'application/json',
 				},
+
 				body: JSON.stringify({
 					name: form.name.trim(),
 					phone: form.phone.trim(),
-					website: '', // honeypot
+
+					// honeypot
+					website,
+
 					timestamp: startTime,
 				}),
 			});
@@ -42,12 +50,19 @@ export default function Home() {
 
 			if (data.success) {
 				alert('Заявка відправлена ✅');
-				setForm({ name: '', phone: '' });
+
+				setForm({
+					name: '',
+					phone: '',
+				});
+
+				setWebsite('');
 			} else {
 				alert('Помилка ❌');
 			}
 		} catch (err) {
 			console.error(err);
+
 			alert('Сервер недоступний ❌');
 		} finally {
 			setLoading(false);
@@ -60,7 +75,10 @@ export default function Home() {
 				placeholder='Ім’я'
 				value={form.name}
 				onChange={(e) =>
-					setForm((prev) => ({ ...prev, name: e.target.value }))
+					setForm((prev) => ({
+						...prev,
+						name: e.target.value,
+					}))
 				}
 			/>
 
@@ -68,14 +86,19 @@ export default function Home() {
 				placeholder='+380XXXXXXXXX'
 				value={form.phone}
 				onChange={(e) =>
-					setForm((prev) => ({ ...prev, phone: e.target.value }))
+					setForm((prev) => ({
+						...prev,
+						phone: e.target.value,
+					}))
 				}
 			/>
 
-			{/* honeypot поле (боти його заповнюють) */}
+			{/* honeypot поле */}
 			<input
 				type='text'
 				name='website'
+				value={website}
+				onChange={(e) => setWebsite(e.target.value)}
 				autoComplete='off'
 				style={{ display: 'none' }}
 			/>

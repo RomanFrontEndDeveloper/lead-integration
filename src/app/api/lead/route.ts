@@ -14,6 +14,8 @@ export async function POST(req: Request) {
 		// 🛡️ Honeypot anti-spam
 		// =========================
 		if (website) {
+			console.log('🚨 SPAM DETECTED:', website);
+
 			return Response.json(
 				{
 					success: false,
