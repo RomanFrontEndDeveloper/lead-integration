@@ -90,10 +90,9 @@ export async function POST(req: Request) {
 			// 📢 Telegram alert
 			// =========================
 			await sendTelegramAlert(
-				`❌ SalesDrive API error
-
-Name: ${name}
-Phone: ${phone}`,
+				`❌ SalesDrive API error        
+        Name: ${name}
+        Phone: ${phone}`,
 			);
 		}
 
@@ -112,9 +111,8 @@ Phone: ${phone}`,
 			// =========================
 			await sendTelegramAlert(
 				`❌ Dilovod API error
-
-Name: ${name}
-Phone: ${phone}`,
+        Name: ${name}
+        Phone: ${phone}`,
 			);
 		}
 
