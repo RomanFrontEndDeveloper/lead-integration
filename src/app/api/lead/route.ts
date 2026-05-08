@@ -1,6 +1,6 @@
-import { sendTelegramAlert } from '@/lib/telegram';
 import { validateForm } from '@/lib/validators';
 import { createDilovodClient } from '@/lib/dilovod';
+import { createSalesDriveLead } from '@/lib/salesdrive';
 
 export async function POST(req: Request) {
 	console.log('LEAD API CALLED');
@@ -56,45 +56,7 @@ export async function POST(req: Request) {
 		// =========================
 		// ✅ SalesDrive API
 		// =========================
-		let salesSuccess = false;
-
-		try {
-			const res = await fetch(
-				'https://roman-trend.salesdrive.me/handler/',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-Api-Key': process.env.SALESDRIVE_API_KEY!,
-					},
-					body: JSON.stringify({
-						form: '1',
-						fName: name,
-						phone: phone,
-						comment: 'Lead from website',
-					}),
-				},
-			);
-
-			console.log('SalesDrive status:', res.status);
-
-			if (!res.ok) {
-				throw new Error('SalesDrive request failed');
-			}
-
-			salesSuccess = true;
-		} catch (error) {
-			console.error('SalesDrive error:', error);
-
-			// =========================
-			// 📢 Telegram alert
-			// =========================
-			await sendTelegramAlert(
-				`❌ SalesDrive API error        
-        Name: ${name}
-        Phone: ${phone}`,
-			);
-		}
+		const salesSuccess = await createSalesDriveLead(name, phone);
 
 		// =========================
 		// ✅ Dilovod API
@@ -105,15 +67,6 @@ export async function POST(req: Request) {
 			console.log('Dilovod client created');
 		} catch (error) {
 			console.error('Dilovod error:', error);
-
-			// =========================
-			// 📢 Telegram alert
-			// =========================
-			await sendTelegramAlert(
-				`❌ Dilovod API error
-        Name: ${name}
-        Phone: ${phone}`,
-			);
 		}
 
 		// =========================
